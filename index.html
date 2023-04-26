@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>soso-player</title>
+    <script src="index.js"></script>
+    <script>
+      const $ = (q) => document.querySelector(q);
+      const onload = () => {
+        const elVideo = $("video");
+        const elMaster = $("input[type=checkbox]");
+        const elOffset = $("input[type=range]");
+        const elSyncing = $("#syncing");
+
+        let syncPlaying = (data) => {
+            elSyncing.style.visibility = elSyncing.style.visibility === 'hidden' ? 'visible':'hidden'
+          let diff = new Date() * 1 - data.time;
+          let currentTime = data.currentTime + diff / 1000;
+          let abs = Math.abs(elVideo.currentTime - currentTime)
+          console.log("syncPlaying", data, diff,abs);
+          if (elVideo.paused !== data.paused) {
+            data.paused ? elVideo.pause() : elVideo.play();
+          }
+          if (data.paused) {
+            return;
+          }
+          if (abs > 0.01 && Math.abs(elOffset.valueAsNumber) < 0.01) {
+            console.log("set currentTime", currentTime,elOffset.valueAsNumber);
+            elVideo.currentTime = currentTime + elOffset.valueAsNumber;
+          }
+        };
+        let send = ()=>{}
+        let publich=()=>{
+            send({ time: new Date() * 1, currentTime: elVideo.currentTime, paused: elVideo.paused });
+        }
+        setInterval(publich, 1300);
+        let updateModel = () => {
+          if (elMaster.checked) {
+            send = newClient(`soso-player_admin`, "soso-player");
+          } else {
+            send = ()=>{}
+            newClient(`soso-player_client_${new Date() % 10000000}_${Math.random()}`, "soso-player", (data) => {
+              console.log(`data`, data);
+              syncPlaying(data);
+            });
+          }
+        };
+        elVideo.onplay = elVideo.onpause = ()=>publich()
+
+        elMaster.addEventListener("change", updateModel);
+        elOffset.addEventListener("change", (e) => {
+          $("#offsetVal").innerHTML = elOffset.valueAsNumber
+          elVideo.currentTime = elVideo.currentTime + elOffset.valueAsNumber
+        });
+        $("#offsetVal").innerHTML = elOffset.valueAsNumber
+        updateModel()
+      };
+    </script>
+  </head>
+  <body onload="onload()">
+    <label> <input type="checkbox" />主播 </label>
+    <br />
+    <label> <input type="range" step="0.01" min="-1" max="1" />offset <span id="offsetVal"></label>
+    <br />
+    <span id="syncing">syncing</span>
+    <br>
+    <video src="1.mp3" controls playsinline></video>
+
+  </body>
+</html>
