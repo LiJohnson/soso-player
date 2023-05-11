@@ -5,19 +5,42 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>soso-player</title>
+    <style>
+      .join{
+        position: fixed;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(45deg, #333232d4, #ffffffa8);
+        backdrop-filter: blur(2px);
+      }
+      </style>
     <script src="index.js"></script>
+    
     <script>
+      const params = new URLSearchParams(location.search)
+      const wsParams = {
+        wsUrl:params.get("wsUrl"),
+        username:params.get("username"),
+        password:params.get("password"),
+        
+      }
+      const room = params.get("room")
+      const musicUrl = params.get("musicUrl")
+      const master = params.get("master")
+
       const $ = (q) => document.querySelector(q);
       const onload = () => {
         const elVideo = $("video");
         const elMaster = $("input[type=checkbox]");
         const elOffset = $("input[type=range]");
         const elSyncing = $("#syncing");
-
+        const elFile = $("input[type=file]")
         let syncPlaying = (data) => {
             elSyncing.style.visibility = elSyncing.style.visibility === 'hidden' ? 'visible':'hidden'
-          let diff = new Date() * 1 - data.time;
-          let currentTime = data.currentTime + diff / 1000;
+          let diff = new Date() * 1 - data.time ;
+          let currentTime = data.currentTime + diff / 1000 + elOffset.valueAsNumber;
           let abs = Math.abs(elVideo.currentTime - currentTime)
           console.log("syncPlaying", data, diff,abs);
           if (elVideo.paused !== data.paused) {
@@ -26,25 +49,31 @@
           if (data.paused) {
             return;
           }
-          if (abs > 0.01 && Math.abs(elOffset.valueAsNumber) < 0.01) {
-            console.log("set currentTime", currentTime,elOffset.valueAsNumber);
-            elVideo.currentTime = currentTime + elOffset.valueAsNumber;
+          if (abs > 0.05) {
+            console.log("set currentTime", currentTime);
+            elVideo.currentTime = currentTime
           }
+          
         };
         let send = ()=>{}
         let publich=()=>{
-            send({ time: new Date() * 1, currentTime: elVideo.currentTime, paused: elVideo.paused });
+            send( room, { time: new Date() * 1, currentTime: elVideo.currentTime, paused: elVideo.paused });
         }
-        setInterval(publich, 1300);
+        setInterval(publich, 3_000);
+        let messageHandle = {}
+        messageHandle[room] = data =>{
+          console.log(`data`, data);
+          syncPlaying(data);
+        }
         let updateModel = () => {
           if (elMaster.checked) {
-            send = newClient(`soso-player_admin`, "soso-player");
+            send = newClient( { ...wsParams, clientId:`${room}_admin`} ,()=>{
+              elMaster.checked = false
+              updateModel()
+            });
           } else {
             send = ()=>{}
-            newClient(`soso-player_client_${new Date() % 10000000}_${Math.random()}`, "soso-player", (data) => {
-              console.log(`data`, data);
-              syncPlaying(data);
-            });
+            newClient( {...wsParams, clientId: `${room}_client_${new Date() % 10000000}_${Math.random()}`,  ...messageHandle});
           }
         };
         elVideo.onplay = elVideo.onpause = ()=>publich()
@@ -52,21 +81,43 @@
         elMaster.addEventListener("change", updateModel);
         elOffset.addEventListener("change", (e) => {
           $("#offsetVal").innerHTML = elOffset.valueAsNumber
-          elVideo.currentTime = elVideo.currentTime + elOffset.valueAsNumber
+        //   elVideo.currentTime = elVideo.currentTime + elOffset.valueAsNumber
         });
+        elFile.addEventListener("change",()=>{
+            elVideo.src = URL.createObjectURL(elFile.files[0])
+        })
+        $(".join button").addEventListener("click",()=>{
+          $(".join").style.display = 'none'
+        })
         $("#offsetVal").innerHTML = elOffset.valueAsNumber
+        $("video").src = musicUrl
+        if(!master){
+          elMaster.parentNode.style.display = 'none'
+          $(".join").style.display = 'flex'
+        } else {
+          $(".join").style.display = 'none'
+          elMaster.checked = true
+        }
+        $("#share").href = location.href.replace(/master\=[^&]*/,'')
         updateModel()
       };
     </script>
   </head>
   <body onload="onload()">
     <label> <input type="checkbox" />主播 </label>
+    <a href="" id="share" target="_blank">分享链接</a>
     <br />
     <label> <input type="range" step="0.01" min="-1" max="1" />offset <span id="offsetVal"></label>
     <br />
     <span id="syncing">syncing</span>
     <br>
+    <input type="file">
+    <br>
     <video src="1.mp3" controls playsinline></video>
+
+    <div class="join">
+      <button>加入</button>
+    </div>
 
   </body>
 </html>
