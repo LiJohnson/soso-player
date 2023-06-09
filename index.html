@@ -56,10 +56,10 @@
           
         };
         let send = ()=>{}
-        let publich=()=>{
+        let publish=()=>{
             send( room, { time: new Date() * 1, currentTime: elVideo.currentTime, paused: elVideo.paused });
         }
-        setInterval(publich, 3_000);
+        setInterval(publish, 3_000);
         let messageHandle = {}
         messageHandle[room] = data =>{
           console.log(`data`, data);
@@ -76,7 +76,7 @@
             newClient( {...wsParams, clientId: `${room}_client_${new Date() % 10000000}_${Math.random()}`,  ...messageHandle});
           }
         };
-        elVideo.onplay = elVideo.onpause = ()=>publich()
+        elVideo.onplay = elVideo.onpause = ()=>publish()
 
         elMaster.addEventListener("change", updateModel);
         elOffset.addEventListener("change", (e) => {
