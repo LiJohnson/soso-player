@@ -22,3 +22,7 @@ http://192.168.3.131:8000/?&wsUrl=ws://lcs:lcs@192.168.1.109:8083/mqtt&username=
 ### 非master
 
 http://192.168.3.131:8000/?&wsUrl=ws://lcs:lcs@192.168.1.109:8083/mqtt&username=lcs&password=lcs&&room=soso-player&musicUrl=http://192.168.3.131:8000/1.mp3
+
+## For BrowserStack
+
+This project is tested with BrowserStack.
